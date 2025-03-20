@@ -214,18 +214,21 @@ def get_utilities_parser() -> ArgumentParser:
 
 def create_concolic_parser(parser: ArgumentParser) -> ArgumentParser:
     """
+    智能合约的分支翻转分析添加命令
     Get parser which handles arguments for concolic branch flipping
     """
     parser.add_argument(
         "input",
         help="The input jsonv2 file with concrete data",
     )
+    # 允许用户指定需要翻转的分支地址
     parser.add_argument(
         "--branches",
         help="branch addresses to be flipped. usage: --branches 34,6f8,16a",
         required=True,
         metavar="BRANCH",
     )
+    # 求解器处理查询的最大时间
     parser.add_argument(
         "--solver-timeout",
         type=int,
@@ -238,21 +241,31 @@ def create_concolic_parser(parser: ArgumentParser) -> ArgumentParser:
 def main() -> None:
     """The main CLI interface entry point."""
 
+    # 获取RPC参数
     rpc_parser = get_rpc_parser()
+    # 获取通用工具的参数
     utilities_parser = get_utilities_parser()
+    # 获取运行时参数
     runtime_input_parser = get_runtime_input_parser()
+    # 获取创建时参数
     creation_input_parser = get_creation_input_parser()
+    # 获取输出相关参数
     output_parser = get_output_parser()
-
+    # 定义主解析器 parser
     parser = argparse.ArgumentParser(
         description="Security analysis of Ethereum smart contracts"
     )
+    # 增加 --epic 设置True，使用下来感觉是上色...
+    # 增加 -v 设置日志级别
     parser.add_argument("--epic", action="store_true", help=argparse.SUPPRESS)
     parser.add_argument(
         "-v", type=int, help="log level (0-5)", metavar="LOG_LEVEL", default=2
     )
 
+    # 创建子命令集
     subparsers = parser.add_subparsers(dest="command", help="Commands")
+    # 1. safe-functions
+    # 使用符号执行检查完全安全的函数
     safe_function_parser = subparsers.add_parser(
         SAFE_FUNCTIONS_COMMAND,
         help="Check functions which are completely safe using symbolic execution",
@@ -265,6 +278,11 @@ def main() -> None:
         ],
         formatter_class=RawTextHelpFormatter,
     )
+    # 添加参数
+    create_safe_functions_parser(safe_function_parser)
+
+    # 2. analyze
+    # 分析合约,最重要的
     analyzer_parser = subparsers.add_parser(
         ANALYZE_LIST[0],
         help="Triggers the analysis of the smart contract",
@@ -278,9 +296,11 @@ def main() -> None:
         aliases=ANALYZE_LIST[1:],
         formatter_class=RawTextHelpFormatter,
     )
-    create_safe_functions_parser(safe_function_parser)
+    # 添加参数
     create_analyzer_parser(analyzer_parser)
 
+    # 3. disassemble
+    # 反汇编合约
     disassemble_parser = subparsers.add_parser(
         DISASSEMBLE_LIST[0],
         help="Disassembles the smart contract",
@@ -293,8 +313,11 @@ def main() -> None:
         ],
         formatter_class=RawTextHelpFormatter,
     )
+    # 添加参数
     create_disassemble_parser(disassemble_parser)
 
+    # 4. concolic
+    # 运行共线性执行以翻转目标分支
     concolic_parser = subparsers.add_parser(
         CONCOLIC_LIST[0],
         help="Runs concolic execution to flip the desired branches",
@@ -302,8 +325,12 @@ def main() -> None:
         parents=[],
         formatter_class=RawTextHelpFormatter,
     )
+    # 添加参数
     create_concolic_parser(concolic_parser)
 
+    # 5. foundry
+    # 分析foundry下的合约
+    # 为 Foundry 相关的命令创建一个专用的解析器
     foundry_parser = subparsers.add_parser(
         FOUNDRY_LIST[0],
         help="Triggers the analysis of the smart contract",
@@ -315,42 +342,64 @@ def main() -> None:
         aliases=FOUNDRY_LIST[1:],
         formatter_class=RawTextHelpFormatter,
     )
+    # 添加参数
+    create_foundry_parser(foundry_parser)
 
+    # 6. list-detectors
+    # 列举可用的检测
     _ = subparsers.add_parser(
         LIST_DETECTORS_COMMAND,
         parents=[output_parser],
         help="Lists available detection modules",
     )
+
+    # 7. read-storage
+    # 通过RPC获取slot
     read_storage_parser = subparsers.add_parser(
         READ_STORAGE_COMNAND,
         help="Retrieves storage slots from a given address through rpc",
         parents=[rpc_parser],
     )
+    # 添加参数
+    create_read_storage_parser(read_storage_parser)
+
+    # 8. function-to-hash
+    # 返回函数的签名
     contract_func_to_hash = subparsers.add_parser(
         FUNCTION_TO_HASH_COMMAND, help="Returns the hash signature of the function"
     )
+    # 添加参数
+    create_func_to_hash_parser(contract_func_to_hash)
+
+    # 9. hash-to-address
+    # 转换哈希为以太坊地址
     contract_hash_to_addr = subparsers.add_parser(
         HASH_TO_ADDRESS_COMMAND,
         help="converts the hashes in the blockchain to ethereum address",
     )
+    # 添加参数
+    create_hash_to_addr_parser(contract_hash_to_addr)
+
+    # 10. version
+    # 版本
     subparsers.add_parser(
         VERSION_COMMAND, parents=[output_parser], help="Outputs the version"
     )
 
-    create_read_storage_parser(read_storage_parser)
-    create_hash_to_addr_parser(contract_hash_to_addr)
-    create_func_to_hash_parser(contract_func_to_hash)
-    create_foundry_parser(foundry_parser)
+    # 11. help
     subparsers.add_parser(HELP_COMMAND, add_help=False)
 
     # Get config values
-
     args = parser.parse_args()
+
+    # 入口
+    # 解析参数并执行
     parse_args_and_execute(parser=parser, args=args)
 
 
 def create_disassemble_parser(parser: ArgumentParser):
     """
+    添加反汇编参数
     Modify parser to handle disassembly
     :param parser:
     :return:
@@ -370,7 +419,10 @@ def create_read_storage_parser(read_storage_parser: ArgumentParser):
     :param read_storage_parser:
     :return:
     """
-
+    # 读取连续的slots
+    # 0,5,array --> 从0开始读到5
+    # 读取映射类型的slots
+    # mapping,1,[0x12,0x34] --> 读取映射类型，索引1，键值0x12，0x34
     read_storage_parser.add_argument(
         "storage_slots",
         help="read state variables from storage index",
@@ -404,6 +456,9 @@ def create_hash_to_addr_parser(hash_parser: ArgumentParser):
 
 
 def add_graph_commands(parser: ArgumentParser):
+    """
+    添加与图形生成相关的命令,生成cfg/json
+    """
     commands = parser.add_argument_group("commands")
     commands.add_argument("-g", "--graph", help="generate a control flow graph")
     commands.add_argument(
@@ -416,6 +471,7 @@ def add_graph_commands(parser: ArgumentParser):
 
 def create_safe_functions_parser(parser: ArgumentParser):
     """
+    添加文件参数
     The duplication exists between safe-functions and analyze as some of them have different default values.
     :param parser: Parser
     """
@@ -432,36 +488,46 @@ def create_safe_functions_parser(parser: ArgumentParser):
 
 def add_analysis_args(options):
     """
+    命令行添加分析参数
     Adds arguments for analysis
 
     :param options: Analysis Options
     """
 
+    # 指定 安全分析模块 列表
     options.add_argument(
         "-m",
         "--modules",
         help="Comma-separated list of security analysis modules",
         metavar="MODULES",
     )
+    # 符号执行的最大深度，默认128
     options.add_argument(
         "--max-depth",
         type=int,
         default=128,
         help="Maximum recursion depth for symbolic execution",
     )
+    # 调用的最大深度，默认3
     options.add_argument(
         "--call-depth-limit",
         type=int,
         default=3,
         help="Maximum call depth limit for symbolic execution",
     )
-
+    # 符号执行策略，默认广度优先
+    # 可选：深度优先、随机策略、加权随机策略、待处理
     options.add_argument(
         "--strategy",
         choices=["dfs", "bfs", "naive-random", "weighted-random", "pending"],
         default="bfs",
         help="Symbolic execution strategy",
     )
+    # 指定交易序列，用于约束符号执行路径
+    # [[func_hash1, func_hash2], [func_hash2, func_hash3]]
+    # 第一笔交易是func_hash1或者func_hash2，第二笔交易func_hash2或者func_hash3
+    # -1 表示作为一个代理的fallback()
+    # -2 表示receive()
     options.add_argument(
         "--transaction-sequences",
         type=str,
@@ -470,12 +536,14 @@ def add_analysis_args(options):
         "Like [[func_hash1, func_hash2], [func_hash2, func_hash3]] where the first transaction is constrained "
         "with func_hash1 and func_hash2, and the second tx is constrained with func_hash2 and func_hash3. Use -1 as a proxy for fallback() function and -2 for receive() function.",
     )
+    # 启用Beam Search算法的宽度
     options.add_argument(
         "--beam-search",
         type=int,
         default=None,
         help="Beam search with with",
     )
+    # 限制循环的最大迭代次数
     options.add_argument(
         "-b",
         "--loop-bound",
@@ -484,6 +552,7 @@ def add_analysis_args(options):
         help="Bound loops at n iterations",
         metavar="N",
     )
+    # 最大的交易数量，默认为2
     options.add_argument(
         "-t",
         "--transaction-count",
@@ -491,101 +560,120 @@ def add_analysis_args(options):
         default=2,
         help="Maximum number of transactions issued by laser",
     )
+    # 符号执行的超时时间，默认36000
     options.add_argument(
         "--execution-timeout",
         type=int,
         default=3600,
         help="The amount of seconds to spend on symbolic execution",
     )
+    # 求解器处理分析模块查询的最大时间
     options.add_argument(
         "--solver-timeout",
         type=int,
         default=25000,
         help="The maximum amount of time(in milli seconds) the solver spends for queries from analysis modules",
     )
+    # 合约创建阶段的最大运行时间
     options.add_argument(
         "--create-timeout",
         type=int,
         default=30,
         help="The amount of seconds to spend on the initial contract creation",
     )
+    # 启用并行求解
     options.add_argument(
         "--parallel-solving",
         action="store_true",
         help="Enable solving z3 queries in parallel",
     )
+    # 求解器日志
     options.add_argument(
         "--solver-log",
         help="Path to the directory for solver log",
         metavar="SOLVER_LOG",
     )
+    # 禁用链上获取数据
     options.add_argument(
         "--no-onchain-data",
         action="store_true",
         help="Don't attempt to retrieve contract code, variables and balances from the blockchain",
     )
+    # 控制符号执行过程中的剪枝策略
     options.add_argument(
         "--pruning-factor",
         type=float,
         default=None,
         help="Checks for reachability at the rate of <pruning-factor> (range 0-1.0). Where 1.0 would mean checking for every execution",
     )
+    # 将storage视为符号，不从链上获取真实值
     options.add_argument(
         "--unconstrained-storage",
         action="store_true",
         help="Default storage value is symbolic, turns off the on-chain storage loading",
     )
-
+    # 启用 Phrack 风格的调用图
     options.add_argument(
         "--phrack", action="store_true", help="Phrack-style call graph"
     )
+    # 启用物理模拟
     options.add_argument(
         "--enable-physics", action="store_true", help="Enable graph physics simulation"
     )
+    # 查询函数签名
     options.add_argument(
         "-q",
         "--query-signature",
         action="store_true",
         help="Lookup function signatures through www.4byte.directory",
     )
+    # 禁用指令分析器
     options.add_argument(
         "--disable-iprof", action="store_true", help="Disable the instruction profiler"
     )
+    # 禁用基于依赖关系的剪枝，保留更多的执行路劲
     options.add_argument(
         "--disable-dependency-pruning",
         action="store_true",
         help="Deactivate dependency-based pruning",
     )
+    # 禁用基于覆盖发搜索策略，选择其他搜索策略
     options.add_argument(
         "--disable-coverage-strategy",
         action="store_true",
         help="Disable coverage based search strategy",
     )
+    # 禁用变异剪枝，以保留更多可能的执行路径
     options.add_argument(
         "--disable-mutation-pruner",
         action="store_true",
         help="Disable mutation pruner",
     )
+    # 启用状态合并，以优化符号执行的效率
     options.add_argument(
         "--enable-state-merging",
         action="store_true",
         help="Enable State Merging",
     )
+    # 启用符号摘要，以优化符号执行的效率
     options.add_argument(
         "--enable-summaries",
         action="store_true",
         help="Enable using symbolic summaries",
     )
+    # 指定一个目录，用于加载自定义的分析模块
     options.add_argument(
         "--custom-modules-directory",
         help="Designates a separate directory to search for custom analysis modules",
         metavar="CUSTOM_MODULES_DIRECTORY",
     )
+    # 指定一个地址，用于模拟攻击者的行为
     options.add_argument(
         "--attacker-address",
         help="Designates a specific attacker address to use during analysis",
         metavar="ATTACKER_ADDRESS",
     )
+    # 指定一个地址，用于模拟合约创建者的行为
     options.add_argument(
         "--creator-address",
         help="Designates a specific creator address to use during analysis",
@@ -595,6 +683,7 @@ def add_analysis_args(options):
 
 def create_analyzer_parser(analyzer_parser: ArgumentParser):
     """
+    添加文件参数
     Modify parser to handle analyze command
     :param analyzer_parser:
     :return:
@@ -618,10 +707,12 @@ def create_foundry_parser(foundry_parser: ArgumentParser):
 
 def validate_args(args: Namespace):
     """
+    验证参数
     Validate cli args
     :param args:
     :return:
     """
+    # 是否启用了-v(用于设置日志级别)
     if hasattr(args, "v"):
         if 0 <= args.v < 6:
             log_levels = [
@@ -639,16 +730,18 @@ def validate_args(args: Namespace):
             exit_with_error(
                 args.outform, "Invalid -v value, you can find valid values in usage"
             )
-
+    # 使用了反汇编命令，但提供了多个文件，退出
     if args.command in DISASSEMBLE_LIST and len(args.solidity_files) > 1:
         exit_with_error("text", "Only a single arg is supported for using disassemble")
-
+    
     if getattr(args, "transaction_sequences", None):
+        # 指定了交易序列，但未禁用依赖剪枝，警告
         if getattr(args, "disable_dependency_pruning", False) is False:
             log.warning(
                 "It is advised to disable dependency pruning (use the flag --disable-dependency-pruning) when specifying transaction sequences."
             )
         try:
+            # 将交易序列从字符串解析为 Python 对象
             args.transaction_sequences = literal_eval(str(args.transaction_sequences))
         except ValueError:
             exit_with_error(
@@ -659,6 +752,7 @@ def validate_args(args: Namespace):
                 "If any list is empty then all possible functions are considered for that transaction."
                 "Use -1 as a proxy for fallback() and -2 for receive() function.",
             )
+        # 交易序列的长度与交易数量不一致，更新交易数量为交易序列的长度
         if len(args.transaction_sequences) != args.transaction_count:
             args.transaction_count = len(args.transaction_sequences)
 
@@ -670,13 +764,19 @@ def set_config(args: Namespace):
     :return: modified config
     """
     config = MythrilConfig()
+
+    # 设置 Infura ID
     if getattr(args, "infura_id", None):
         config.set_api_infura_id(args.infura_id)
+    
+    # 指定了分析指令，但没有指定 --no-onchain-data 参数和指定 --rpc 或 --i 参数
     if (args.command in ANALYZE_LIST and not args.no_onchain_data) and not (
         args.rpc or args.i
     ):
+        # 从config.ini中加载 API 设置
         config.set_api_from_config_path()
 
+    # 设置rpc
     if getattr(args, "rpc", None):
         # Establish RPC connection if necessary
         config.set_api_rpc(rpc=args.rpc, rpctls=args.rpctls)
@@ -755,6 +855,7 @@ def execute_command(
     args: Namespace,
 ):
     """
+    根据参数命令执行
     Execute command
     :param disassembler:
     :param address:
@@ -762,39 +863,52 @@ def execute_command(
     :param args:
     :return:
     """
+    # 是否指定了 beam_search 参数
     if getattr(args, "beam_search", None):
         strategy = f"beam-search: {args.beam_search}"
     else:
+        # 默认dfs
         strategy = getattr(args, "strategy", "dfs")
-
+    
+    # 指定了读取存储槽命令
     if args.command == READ_STORAGE_COMNAND:
         storage = disassembler.get_state_variable_from_storage(
             address=address,
             params=[a.strip() for a in args.storage_slots.strip().split(",")],
         )
         print(storage)
-
+    
+    # 指定了反汇编命令,打印合约代码
     elif args.command in DISASSEMBLE_LIST:
         if disassembler.contracts[0].code:
             print("Runtime Disassembly: \n" + disassembler.contracts[0].get_easm())
         if disassembler.contracts[0].creation_code:
             print("Disassembly: \n" + disassembler.contracts[0].get_creation_easm())
-
+    
+    # 指定了安全函数（那些不会导致合约状态变更或资金损失的函数）命令，配置分析器并执行分析
     elif args.command == SAFE_FUNCTIONS_COMMAND:
+        # 不从区块链上获取数据，仅使用本地数据进行分析
+        # 禁用依赖剪枝，以保留更多可能的执行路径
+        # 默认存储值设置为符号值，而不加载实际的链上存储数据
         args.no_onchain_data = args.disable_dependency_pruning = (
             args.unconstrained_storage
         ) = True
+        # 每次执行时都进行可达性检查，以确保分析的准确性
         args.pruning_factor = 1
+        # 创建一个 MythrilAnalyzer 对象，用于执行智能合约的分析
         function_analyzer = MythrilAnalyzer(
             strategy=strategy, disassembler=disassembler, address=address, cmd_args=args
         )
         try:
+            # 执行分析
             report = function_analyzer.fire_lasers(
+                # 指定要使用的检测模块
                 modules=(
                     [m.strip() for m in args.modules.strip().split(",")]
                     if args.modules
                     else None
                 ),
+                # 仅分析单个交易
                 transaction_count=1,
             )
             print_function_report(disassembler, report)
@@ -803,28 +917,33 @@ def execute_command(
         except CriticalError as e:
             exit_with_error("text", "Analysis error encountered: " + format(e))
 
+    # 最主要部分，执行安全性分析
     elif args.command in ANALYZE_LIST + FOUNDRY_LIST:
+        # 创建一个 MythrilAnalyzer 对象，用于执行智能合约的分析
         analyzer = MythrilAnalyzer(
             strategy=strategy, disassembler=disassembler, address=address, cmd_args=args
         )
 
+        # 检查 disassembler.contracts 是否为空
         if not disassembler.contracts:
             exit_with_error(
                 args.outform, "input files do not contain any valid contracts"
             )
 
+        # 设置攻击者地址
         if args.attacker_address:
             try:
                 ACTORS["ATTACKER"] = args.attacker_address
             except ValueError:
                 exit_with_error(args.outform, "Attacker address is invalid")
-
+        # 设置创建者地址
         if args.creator_address:
             try:
                 ACTORS["CREATOR"] = args.creator_address
             except ValueError:
                 exit_with_error(args.outform, "Creator address is invalid")
 
+        # 生成控制流图
         if args.graph:
             html = analyzer.graph_html(
                 contract=analyzer.contracts[0],
@@ -839,6 +958,7 @@ def execute_command(
             except Exception as e:
                 exit_with_error(args.outform, "Error saving graph: " + str(e))
 
+        # 生成状态空间 JSON
         elif args.statespace_json:
             if not analyzer.contracts:
                 exit_with_error(
@@ -856,11 +976,13 @@ def execute_command(
         else:
             try:
                 report = analyzer.fire_lasers(
+                    # 要使用的检测模块
                     modules=(
                         [m.strip() for m in args.modules.strip().split(",")]
                         if args.modules
                         else None
                     ),
+                    # 要执行的交易数量
                     transaction_count=args.transaction_count,
                 )
 
@@ -898,28 +1020,29 @@ def contract_hash_to_address(args: Namespace):
 
 def parse_args_and_execute(parser: ArgumentParser, args: Namespace) -> None:
     """
+    解析参数,并执行相应操作
     Parses the arguments
     :param parser: The parser
     :param args: The args
     """
-
+    # 将当前命令行参数传递给epic.py
     if args.epic:
         path = os.path.dirname(os.path.realpath(__file__))
         sys.argv.remove("--epic")
         os.system(" ".join(sys.argv) + " | python3 " + path + "/epic.py")
         sys.exit()
-
+    # 检查命令是否有效
     if args.command not in COMMAND_LIST or args.command is None:
         parser.print_help()
         sys.exit()
-
+    # 版本
     if args.command == VERSION_COMMAND:
         if args.outform == "json":
             print(json.dumps({"version_str": VERSION}))
         else:
             print("Mythril version {}".format(VERSION))
         sys.exit()
-
+    # list-detectors
     if args.command == LIST_DETECTORS_COMMAND:
         modules = []
         for module in ModuleLoader().get_detection_modules():
@@ -930,38 +1053,46 @@ def parse_args_and_execute(parser: ArgumentParser, args: Namespace) -> None:
             for module_data in modules:
                 print("{}: {}".format(module_data["classname"], module_data["title"]))
         sys.exit()
-
+    # 帮助
     if args.command == HELP_COMMAND:
         parser.print_help()
         sys.exit()
-
+    
+    # 处理符号执行命令
     if args.command in CONCOLIC_LIST:
         _ = MythrilConfig.init_mythril_dir()
         with open(args.input) as f:
             concrete_data = json.load(f)
+        # 执行
         output_list = concolic_execution(
             concrete_data, args.branches.split(","), args.solver_timeout
         )
         json.dump(output_list, sys.stdout, indent=4)
         sys.exit()
 
+    # 处理常规命令
     # Parse cmdline args
     validate_args(args)
     try:
+        # 指定了函数哈希命令
         if args.command == FUNCTION_TO_HASH_COMMAND:
             contract_hash_to_address(args)
+        # 配置参数
         config = set_config(args)
+        # 初始化反汇编器
         solc_json = getattr(args, "solc_json", None)
         solv = getattr(args, "solv", None)
         solc_args = getattr(args, "solc_args", None)
+        # 
         disassembler = MythrilDisassembler(
             eth=config.eth,
             solc_version=solv,
             solc_settings_json=solc_json,
             solc_args=solc_args,
         )
-
+        # 加载合约代码
         address = load_code(disassembler, args)
+        # 执行命令
         execute_command(
             disassembler=disassembler, address=address, parser=parser, args=args
         )

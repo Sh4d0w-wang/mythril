@@ -39,6 +39,7 @@ log = logging.getLogger(__name__)
 
 class MythrilDisassembler:
     """
+    生成反汇编代码,编译solidity代码,提供访问链上存储数据功能;
     The Mythril Disassembler class
     Responsible for generating disassembly of smart contracts:
         - Compiles solc code from file/onchain
@@ -47,15 +48,21 @@ class MythrilDisassembler:
 
     def __init__(
         self,
+        # 一个 EthJsonRpc 对象，用于与以太坊节点进行交互
         eth: Optional[EthJsonRpc] = None,
+        # Solidity 编译器版本
         solc_version: str = None,
+        # Solidity 编译器的设置
         solc_settings_json: str = None,
+        # Solidity 编译器的其他参数
         solc_args=None,
     ) -> None:
         args.solc_args = solc_args
         self.solc_version = solc_version
+
         self.solc_binary = self._init_solc_binary(solc_version)
         self.solc_settings_json = solc_settings_json
+        # AAAA
         self.eth = eth
         self.sigs = signatures.SignatureDB()
         self.contracts: List[EVMContract] = []
@@ -319,6 +326,7 @@ class MythrilDisassembler:
     @staticmethod
     def hash_for_function_signature(func: str) -> str:
         """
+        返回函数选择器
         Return function nadmes corresponding signature hash
         :param func: function name
         :return: Its hash signature

@@ -29,7 +29,10 @@ JSON_MEDIA_TYPE = "application/json"
 
 
 class EthJsonRpc(BaseClient):
-    """Ethereum JSON-RPC client class."""
+    """
+    与以太坊节点通信的客户端;
+    Ethereum JSON-RPC client class.
+    """
 
     def __init__(self, host="localhost", port=GETH_DEFAULT_RPC_PORT, tls=False):
         """

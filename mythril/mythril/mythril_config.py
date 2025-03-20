@@ -26,6 +26,7 @@ class MythrilConfig:
         self._init_config()
         self.eth: Optional[EthJsonRpc] = None
 
+    # 设置 Infura ID
     def set_api_infura_id(self, id):
         self.infura_id = id
 

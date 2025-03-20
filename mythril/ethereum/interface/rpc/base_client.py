@@ -17,7 +17,10 @@ JSON_MEDIA_TYPE = "application/json"
 
 
 class BaseClient(object):
-    """The base RPC client class."""
+    """
+    基础RPC客户端;
+    The base RPC client class.
+    """
 
     @abstractmethod
     def _call(self, method, params=None, _id=1):
@@ -33,7 +36,7 @@ class BaseClient(object):
 
     def eth_coinbase(self):
         """TODO: documentation
-
+        获取当前以太坊节点的默认账户地址;
         https://github.com/ethereum/wiki/wiki/JSON-RPC#eth_coinbase
 
         TESTED
@@ -42,7 +45,7 @@ class BaseClient(object):
 
     def eth_blockNumber(self):
         """TODO: documentation
-
+        获取当前以太坊节点的最新区块编号;
         https://github.com/ethereum/wiki/wiki/JSON-RPC#eth_blocknumber
 
         TESTED
@@ -51,7 +54,7 @@ class BaseClient(object):
 
     def eth_getBalance(self, address=None, block=BLOCK_TAG_LATEST):
         """TODO: documentation
-
+        获取指定地址在指定区块高度的余额;
         https://github.com/ethereum/wiki/wiki/JSON-RPC#eth_getbalance
 
         TESTED
@@ -62,7 +65,7 @@ class BaseClient(object):
 
     def eth_getStorageAt(self, address=None, position=0, block=BLOCK_TAG_LATEST):
         """TODO: documentation
-
+        获取指定地址在指定存储位置和区块高度的存储值;
         https://github.com/ethereum/wiki/wiki/JSON-RPC#eth_getstorageat
 
         TESTED
@@ -72,7 +75,7 @@ class BaseClient(object):
 
     def eth_getCode(self, address, default_block=BLOCK_TAG_LATEST):
         """TODO: documentation
-
+        获取指定地址在指定区块高度的合约代码;
         https://github.com/ethereum/wiki/wiki/JSON-RPC#eth_getcode
 
         NEEDS TESTING
@@ -84,7 +87,7 @@ class BaseClient(object):
 
     def eth_getBlockByNumber(self, block=BLOCK_TAG_LATEST, tx_objects=True):
         """TODO: documentation
-
+        获取指定区块编号的区块信息;
         https://github.com/ethereum/wiki/wiki/JSON-RPC#eth_getblockbynumber
 
         TESTED
@@ -94,7 +97,7 @@ class BaseClient(object):
 
     def eth_getTransactionReceipt(self, tx_hash):
         """TODO: documentation
-
+        获取指定交易哈希的交易收据;
         https://github.com/ethereum/wiki/wiki/JSON-RPC#eth_gettransactionreceipt
 
         TESTED
