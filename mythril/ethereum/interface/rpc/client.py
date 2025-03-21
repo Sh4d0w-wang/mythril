@@ -36,7 +36,7 @@ class EthJsonRpc(BaseClient):
 
     def __init__(self, host="localhost", port=GETH_DEFAULT_RPC_PORT, tls=False):
         """
-
+        默认为本机地址,端口为8545,TLS加密不开;
         :param host:
         :param port:
         :param tls:
@@ -49,7 +49,7 @@ class EthJsonRpc(BaseClient):
 
     def _call(self, method, params=None, _id=1):
         """
-
+        调用JSON-RPC方法;
         :param method:
         :param params:
         :param _id:
@@ -88,5 +88,8 @@ class EthJsonRpc(BaseClient):
             raise BadResponseError(response)
 
     def close(self):
-        """Close the RPC client's session."""
+        """
+        关闭连接;
+        Close the RPC client's session.
+        """
         self.session.close()

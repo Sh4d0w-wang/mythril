@@ -25,6 +25,7 @@ log = logging.getLogger(__name__)
 
 def safe_decode(hex_encoded_string):
     """
+    将hex解码为bytes
 
     :param hex_encoded_string:
     :return:

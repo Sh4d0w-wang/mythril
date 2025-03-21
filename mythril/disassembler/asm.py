@@ -17,15 +17,21 @@ regex_PUSH = re.compile(r"^PUSH(\d*)$")
 
 
 class EvmInstruction:
-    """Model to hold the information of the disassembly."""
+    """
+    EVM指令信息模块;
+
+    Model to hold the information of the disassembly.
+    """
 
     def __init__(self, address, op_code, argument=None):
+        # 表示一个 EVM 指令，包含指令的地址、操作码和参数
         self.address = address
         self.op_code = op_code
         self.argument = argument
 
     def to_dict(self) -> dict:
         """
+        指令信息转换为字典格式;
 
         :return:
         """
@@ -36,13 +42,16 @@ class EvmInstruction:
 
 
 def instruction_list_to_easm(instruction_list: list) -> str:
-    """Convert a list of instructions into an easm op code string.
+    """
+    指令列表转换为 EASM格式的字符串 --> "0 PUSH1 0x1";
 
+    Convert a list of instructions into an easm op code string.
     :param instruction_list:
     :return:
     """
     result = ""
-
+    # {"address": 0, "opcode": "PUSH1", "argument": "0x1"},
+    # 0 PUSH1 0x1
     for instruction in instruction_list:
         result += "{} {}".format(instruction["address"], instruction["opcode"])
         if "argument" in instruction:
@@ -53,8 +62,10 @@ def instruction_list_to_easm(instruction_list: list) -> str:
 
 
 def get_opcode_from_name(operation_name: str) -> int:
-    """Get an op code based on its name.
+    """
+    按照指令名字返回其字节码 --> "PUSH1" --> "0x60";
 
+    Get an op code based on its name.
     :param operation_name:
     :return:
     """
@@ -64,7 +75,10 @@ def get_opcode_from_name(operation_name: str) -> int:
 
 
 def find_op_code_sequence(pattern: list, instruction_list: list) -> Generator:
-    """Returns all indices in instruction_list that point to instruction
+    """
+    查找指令列表中符合特定模式的指令序列;
+
+    Returns all indices in instruction_list that point to instruction
     sequences following a pattern.
 
     :param pattern: The pattern to look for, e.g. [["PUSH1", "PUSH2"], ["EQ"]] where ["PUSH1", "EQ"] satisfies pattern
@@ -77,7 +91,10 @@ def find_op_code_sequence(pattern: list, instruction_list: list) -> Generator:
 
 
 def is_sequence_match(pattern: list, instruction_list: list, index: int) -> bool:
-    """Checks if the instructions starting at index follow a pattern.
+    """
+    从指定索引开始的指令序列是否符合特定模式;
+
+    Checks if the instructions starting at index follow a pattern.
 
     :param pattern: List of lists describing a pattern, e.g. [["PUSH1", "PUSH2"], ["EQ"]] where ["PUSH1", "EQ"] satisfies pattern
     :param instruction_list: List of instructions
@@ -97,7 +114,10 @@ lru_cache(maxsize=2**10)
 
 
 def disassemble(bytecode) -> list:
-    """Disassembles evm bytecode and returns a list of instructions.
+    """
+    反汇编字节码,返回指令列表;
+
+    Disassembles evm bytecode and returns a list of instructions.
 
     :param bytecode:
     :return:
@@ -106,6 +126,8 @@ def disassemble(bytecode) -> list:
     address = 0
     length = len(bytecode)
 
+    # 将字节码转为bytes
+    # 提取最后43个字节，用于后续检查是否包含Swarm哈希
     if isinstance(bytecode, str):
         bytecode = util.safe_decode(bytecode)
         length = len(bytecode)
@@ -116,24 +138,32 @@ def disassemble(bytecode) -> list:
         except TypeError:
             part_code = ""
     try:
+        # 忽略Swarm 哈希
         if "bzzr" in str(part_code):
             # ignore swarm hash
             length -= 43
     except ValueError:
         pass
-
+    
+    # 反汇编
     while address < length:
         try:
+            # 查找当前指令字节码
             op_code = ADDRESS_OPCODE_MAPPING[bytecode[address]]
         except KeyError:
+            # 不在指令表中将其标记为"INVALID"后往下处理下一个字节
             instruction_list.append(EvmInstruction(address, "INVALID"))
             address += 1
             continue
-
+        
+        # 当前指令对象
         current_instruction = EvmInstruction(address, op_code)
 
+        # 处理PUSH指令
         match = re.search(regex_PUSH, op_code)
         if match:
+            # 提取参数
+            # [address + 1 : address + 1 + n]
             argument_bytes = bytecode[address + 1 : address + 1 + int(match.group(1))]
             if isinstance(argument_bytes, bytes):
                 current_instruction.argument = "0x" + argument_bytes.hex()

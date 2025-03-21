@@ -59,12 +59,14 @@ class MythrilDisassembler:
     ) -> None:
         args.solc_args = solc_args
         self.solc_version = solc_version
-
+        # 初始化 Solidity 编译器的二进制路径
         self.solc_binary = self._init_solc_binary(solc_version)
         self.solc_settings_json = solc_settings_json
-        # AAAA
+        # EthJsonRpc
         self.eth = eth
+        # 创建一个 SignatureDB 对象，用于管理函数签名
         self.sigs = signatures.SignatureDB()
+        # 初始化 contracts 属性，表示一个空的智能合约列表
         self.contracts: List[EVMContract] = []
 
     @staticmethod
@@ -81,17 +83,20 @@ class MythrilDisassembler:
 
         # tried converting input to semver, seemed not necessary so just slicing for now
         try:
+            # 获取已安装的 Solidity 编译器版本
             main_version = solc.get_solc_version_string()
         except:
             main_version = ""  # allow missing solc will download instead
         main_version_number = re.search(r"\d+.\d+.\d+", main_version)
-
+        # 如果版本字符串以 v 开头，去掉前缀 v
         if version.startswith("v"):
             version = version[1:]
+        # 如果指定的版本与已安装的版本匹配，使用环境变量 SOLC 或默认值 "solc"
         if version == main_version_number:
             log.info("Given version matches installed version")
             solc_binary = os.environ.get("SOLC") or "solc"
         else:
+            # 如果版本不匹配，尝试查找指定版本的 Solidity 编译器
             solc_binary = util.solc_exists(version)
             if solc_binary is None:
                 raise CriticalError(

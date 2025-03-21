@@ -16,7 +16,13 @@ lock = multiprocessing.Lock()
 
 
 def synchronized(sync_lock):
-    """A decorator synchronizing multi-process access to a resource."""
+    """
+    装饰器，用于同步多进程对共享资源的访问
+
+    在调用被装饰的函数之前,获取锁(sync_lock),调用完成后释放锁
+
+    A decorator synchronizing multi-process access to a resource.
+    """
 
     def wrapper(f):
         """The decorator's core function.
@@ -42,7 +48,11 @@ def synchronized(sync_lock):
 
 
 class Singleton(type):
-    """A metaclass type implementing the singleton pattern."""
+    """
+    确保一个类只有一个实例
+
+    A metaclass type implementing the singleton pattern.
+    """
 
     _instances: Dict["Singleton", "Singleton"] = dict()
 
@@ -64,7 +74,10 @@ class Singleton(type):
 
 
 class SQLiteDB(object):
-    """Simple context manager for sqlite3 databases.
+    """
+    管理 SQLite 数据库的连接和操作
+
+    Simple context manager for sqlite3 databases.
 
     Commits everything at exit.
     """
@@ -105,7 +118,12 @@ class SQLiteDB(object):
 
 
 class SignatureDB(object, metaclass=Singleton):
-    """"""
+    """
+    管理以太坊智能合约的函数签名数据库
+
+
+    继承自 object,并使用 Singleton 元类确保全局只有一个实例
+    """
 
     def __init__(self, path: str = None) -> None:
         """
@@ -115,6 +133,8 @@ class SignatureDB(object, metaclass=Singleton):
         # if we're analysing a Solidity file, store its hashes
         # here to prevent unnecessary lookups
         self.solidity_sigs: DefaultDict[str, List[str]] = defaultdict(list)
+
+        # 设置路径
         if path is None:
             self.path = os.environ.get("MYTHRIL_DIR") or os.path.join(
                 os.path.expanduser("~"), ".mythril"
