@@ -38,6 +38,7 @@ def safe_decode(hex_encoded_string):
 
 def get_solc_json(file, solc_binary="solc", solc_settings_json=None):
     """
+    获得solc编译的输出json
 
     :param file:
     :param solc_binary:
@@ -55,7 +56,11 @@ def get_solc_json(file, solc_binary="solc", solc_settings_json=None):
             settings = json.load(f)
     if "optimizer" not in settings:
         settings.update({"optimizer": {"enabled": False}})
-
+    # 更新 settings，指定编译器输出的内容：
+    #   ast：抽象语法树
+    #   metadata：合约元数据
+    #   evm.bytecode 和 evm.deployedBytecode：合约的字节码
+    #   evm.methodIdentifiers：方法标识符
     settings.update(
         {
             "outputSelection": {
@@ -71,7 +76,10 @@ def get_solc_json(file, solc_binary="solc", solc_settings_json=None):
             },
         }
     )
-
+    # 构建标准 JSON 输入，包含：
+    #   language：指定语言为 Solidity
+    #   sources：包含文件路径
+    #   settings：编译器设置
     input_json = json.dumps(
         {
             "language": "Solidity",
@@ -81,6 +89,7 @@ def get_solc_json(file, solc_binary="solc", solc_settings_json=None):
     )
 
     try:
+        # 调用编译器
         p = Popen(cmd, stdin=PIPE, stdout=PIPE, stderr=PIPE)
         stdout, stderr = p.communicate(bytes(input_json, "utf8"))
 
@@ -108,6 +117,7 @@ def get_solc_json(file, solc_binary="solc", solc_settings_json=None):
 
 def get_random_address():
     """
+    生成随机地址
 
     :return:
     """
@@ -116,6 +126,7 @@ def get_random_address():
 
 def get_indexed_address(index):
     """
+    生成基于index的地址 --> (1) --> 0x11..11
 
     :param index:
     :return:
@@ -125,6 +136,7 @@ def get_indexed_address(index):
 
 def solc_exists(version):
     """
+    检查并安装指定版本的 Solidity 编译器
 
     :param version:
     :return:

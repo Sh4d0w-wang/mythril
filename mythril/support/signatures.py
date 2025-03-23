@@ -219,7 +219,10 @@ class SignatureDB(object, metaclass=Singleton):
     def import_solidity_file(
         self, file_path: str, solc_binary: str = "solc", solc_settings_json: str = None
     ):
-        """Import Function Signatures from solidity source files.
+        """
+        从源文件中导入函数签名
+
+        Import Function Signatures from solidity source files.
 
         :param solc_binary:
         :param solc_settings_json:
@@ -230,6 +233,9 @@ class SignatureDB(object, metaclass=Singleton):
         self.add_sigs(file_path, solc_json)
 
     def add_sigs(self, file_path: str, solc_json):
+        """
+        提取方法签名到签名数据库中
+        """
         for contract in solc_json["contracts"][file_path].values():
             if "methodIdentifiers" not in contract["evm"]:
                 continue

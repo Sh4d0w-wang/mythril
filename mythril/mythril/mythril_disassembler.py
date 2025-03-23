@@ -40,6 +40,7 @@ log = logging.getLogger(__name__)
 class MythrilDisassembler:
     """
     生成反汇编代码,编译solidity代码,提供访问链上存储数据功能;
+
     The Mythril Disassembler class
     Responsible for generating disassembly of smart contracts:
         - Compiles solc code from file/onchain
@@ -72,12 +73,13 @@ class MythrilDisassembler:
     @staticmethod
     def _init_solc_binary(version: str) -> Optional[str]:
         """
+        初始化sloidity编译器二进制文件
+
         Only proper versions are supported. No nightlies, commits etc (such as available in remix).
         This functions extracts
         :param version: Version of the solc binary required
         :return: AThe solc binary of the corresponding version
         """
-
         if not version:
             return None
 
@@ -111,15 +113,19 @@ class MythrilDisassembler:
         self, code: str, bin_runtime: bool = False, address: Optional[str] = None
     ) -> Tuple[str, EVMContract]:
         """
+        从字节码中返回合约的地址和合约对象(包含反汇编)
+
         Returns the address and the contract class for the given bytecode
         :param code: Bytecode
         :param bin_runtime: Whether the code is runtime code or creation code
         :param address: address of contract
         :return: tuple(address, Contract class)
         """
+        # 地址未提供，则生成全0地址
         if address is None:
             address = util.get_indexed_address(0)
 
+        # 运行时字节码 True
         if bin_runtime:
             self.contracts.append(
                 EVMContract(
@@ -127,6 +133,7 @@ class MythrilDisassembler:
                     name="MAIN",
                 )
             )
+        # 创建时字节码 False
         else:
             self.contracts.append(
                 EVMContract(
@@ -138,6 +145,8 @@ class MythrilDisassembler:
 
     def load_from_address(self, address: str) -> Tuple[str, EVMContract]:
         """
+        从地址中加载合约,并返回合约的地址和合约对象(包含反汇编)
+
         Returns the contract given it's on chain address
         :param address: The on chain address of a contract
         :return: tuple(address, contract)
@@ -145,12 +154,14 @@ class MythrilDisassembler:
         if not re.match(r"0x[a-fA-F0-9]{40}", address):
             raise CriticalError("Invalid contract address. Expected format is '0x...'.")
 
+        # 检查RPC是否配置正确
         if self.eth is None:
             raise CriticalError(
                 "Please check whether the Infura key is set or use a different RPC method."
             )
 
         try:
+            # 获取字节码
             code = self.eth.eth_getCode(address)
         except FileNotFoundError as e:
             raise CriticalError("IPC error: " + str(e))
@@ -161,19 +172,24 @@ class MythrilDisassembler:
         except Exception as e:
             raise CriticalError("IPC / RPC error: " + str(e))
 
+        # 合约地址无效或节点未正确连接到目标链
         if code == "0x" or code == "0x0":
             raise CriticalError(
                 "Received an empty response from eth_getCode. Check the contract address and verify that you are on the correct chain."
             )
         else:
             self.contracts.append(EVMContract(code, name=address))
+        # 返回地址和合约对象
         return address, self.contracts[-1]  # return address and contract object
 
     def load_from_foundry(self):
+        """
+        从 Foundry 中加载合约
+        """
         project_root = os.getcwd()
-
+        # 编译合约，生成编译信息
         cmd = ["forge", "build", "--build-info", "--force"]
-
+        # 
         with subprocess.Popen(
             cmd,
             stdout=subprocess.PIPE,
@@ -187,15 +203,15 @@ class MythrilDisassembler:
                 log.error(stderr)
 
             build_dir = Path(project_root, "artifacts", "contracts", "build-info")
-
+        # 确定生成目录
         build_dir = os.path.join(project_root, "artifacts", "contracts", "build-info")
-
+        # 生成全0地址
         address = util.get_indexed_address(0)
-
+        # 列出生成目录中的文件
         files = sorted(
             os.listdir(build_dir), key=lambda x: os.path.getmtime(Path(build_dir, x))
         )
-
+        # 找到.json文件
         files = [str(f) for f in files if str(f).endswith(".json")]
         if not files:
             txt = f"`compile` failed. Can you run it?\n{build_dir} is empty"
@@ -203,18 +219,19 @@ class MythrilDisassembler:
         contracts = []
         for file in files:
             build_info = Path(build_dir, file)
-
+            # 打开文件
             with open(build_info, encoding="utf8") as file_desc:
                 loaded_json = json.load(file_desc)
-
+                # 提取output和input部分
                 targets_json = loaded_json["output"]
-
                 input_json = loaded_json["input"]
+
                 compiler = "solc" if input_json["language"] == "Solidity" else "vyper"
 
                 if compiler == "vyper":
                     raise NotImplementedError("Support for Vyper is not implemented.")
-
+                
+                # 提取contracts
                 if "contracts" in targets_json:
                     for original_filename, contracts_info in targets_json[
                         "contracts"
@@ -228,21 +245,25 @@ class MythrilDisassembler:
         return address, contracts
 
     def check_run_integer_module(self, source_file):
+        """
+        检查是否需要运行检测整数溢出的模块
+        """
+        # 检查文件内容是否包含"unchecked"
         with open(source_file, "r") as f:
             for line in f:
                 if "unchecked" in line:
                     return True
-
+        
+        # 大于0.8.0的版本，编译器会自动为算术运算添加溢出检查
         if self.solc_version is None:
             # Runs the version installed in the system (likely 0.8.0+)
             # Post 0.8.0 versions automatically add assertions to sanity check arithmetic
             return False
-
         # Strip leading 'v' from version if it's there
         normalized_version = self.solc_version.lstrip("v")
-
         # Check if solc_version is not provided or doesn't match the required version
         # As post 0.8.0 solc versions automatically add assertions to sanity check arithmetic
+        # 版本为空或者不符合^0.8.0 的要求则要运行检测模块
         if not self.solc_version or not NpmSpec("^0.8.0").match(
             Version(normalized_version)
         ):
@@ -254,6 +275,7 @@ class MythrilDisassembler:
         self, solidity_files: List[str]
     ) -> Tuple[str, List[SolidityContract]]:
         """
+        从 Solidity 源代码文件加载合约
 
         :param solidity_files: List of solidity_files
         :return: tuple of address, contract class list
@@ -261,24 +283,29 @@ class MythrilDisassembler:
         address = util.get_indexed_address(0)
         contracts = []
         for file in solidity_files:
+            # 如果文件路径包含合约名称（格式为 "file.sol:ContractName"），则提取文件路径和合约名称
             if ":" in file:
                 file, contract_name = file.split(":")
             else:
                 contract_name = None
-
+            
+            # 获取编译器路径、版本
             file = os.path.expanduser(file)
             solc_binary = self.solc_binary
             if solc_binary is None:
                 solc_binary, self.solc_version = util.extract_binary(file)
+            # 检查是否需要运行检测溢出的模块
             if self.check_run_integer_module(file) is False:
                 args.use_integer_module = False
             try:
                 # import signatures from solidity source
+                # 导入签名
                 self.sigs.import_solidity_file(
                     file,
                     solc_binary=solc_binary,
                     solc_settings_json=self.solc_settings_json,
                 )
+                # 创建合约对象
                 if contract_name is not None:
                     contract = SolidityContract(
                         input_file=file,

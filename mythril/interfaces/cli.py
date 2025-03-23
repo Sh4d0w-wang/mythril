@@ -1010,6 +1010,8 @@ def execute_command(
 
 def contract_hash_to_address(args: Namespace):
     """
+    打印函数签名
+    
     prints the hash from function signature
     :param args:
     :return:
@@ -1083,7 +1085,7 @@ def parse_args_and_execute(parser: ArgumentParser, args: Namespace) -> None:
         solc_json = getattr(args, "solc_json", None)
         solv = getattr(args, "solv", None)
         solc_args = getattr(args, "solc_args", None)
-        # 
+        # AAAA
         disassembler = MythrilDisassembler(
             eth=config.eth,
             solc_version=solv,

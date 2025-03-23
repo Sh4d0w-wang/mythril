@@ -140,6 +140,7 @@ def get_contracts_from_file(input_file, solc_settings_json=None, solc_binary="so
 
 def get_contracts_from_foundry(input_file, foundry_json):
     """
+    从 Foundry 的编译输出中提取智能合约对象
 
     :param input_file:
     :param solc_settings_json:
