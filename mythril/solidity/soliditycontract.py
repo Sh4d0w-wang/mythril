@@ -14,11 +14,18 @@ log = logging.getLogger(__name__)
 
 
 class SolcAST:
+    """
+    表示Solidity编译器输出的抽象语法树(AST)
+    """
     def __init__(self, ast):
         self.ast = ast
 
     @property
     def node_type(self):
+        """
+        获取当前 AST 节点的类型
+        """
+        # 返回nodeType或者name的值
         if "nodeType" in self.ast:
             return self.ast["nodeType"]
         if "name" in self.ast:
@@ -27,6 +34,10 @@ class SolcAST:
 
     @property
     def abs_path(self):
+        """
+        获取当前 AST 节点的绝对路径
+        """
+        # 返回absolutePath的值
         if "absolutePath" in self.ast:
             return self.ast["absolutePath"]
         else:
@@ -34,6 +45,10 @@ class SolcAST:
 
     @property
     def nodes(self):
+        """
+        获取当前 AST 节点的子节点
+        """
+        # 返回nodes或children的值
         if "nodes" in self.ast:
             return self.ast["nodes"]
         if "children" in self.ast:
@@ -41,18 +56,31 @@ class SolcAST:
         assert False, "Unknown AST type has been fed to SolcAST"
 
     def __next__(self):
+        """
+        迭代器
+        """
         yield self.ast.__next__()
 
     def __getitem__(self, item):
+        """
+        通过索引访问 self.ast 中的元素
+        """
         return self.ast[item]
 
 
 class SolcSource:
+    """
+    表示 Solidity 编译器输出的源码信息
+    """
     def __init__(self, source):
         self.source = source
 
     @property
     def ast(self):
+        """
+        获取源码的抽象语法树(AST)
+        """
+        # 获取ast或legacyAST的值
         if "ast" in self.source:
             return SolcAST(self.source["ast"])
         if "legacyAST" in self.source:
@@ -61,30 +89,50 @@ class SolcSource:
 
     @property
     def id(self):
+        """
+        获取源码的唯一标识符id
+        """
         return self.source["id"]
 
     @property
     def name(self):
+        """
+        获取源码的名称
+        """
         return self.source["name"]
 
     @property
     def contents(self):
+        """
+        获取源码的内容
+        """
         return self.source["contents"]
 
 
 class SourceMapping:
+    """
+    表示 Solidity 文件的源码映射信息
+    """
     def __init__(self, solidity_file_idx, offset, length, lineno, mapping):
         """Representation of a source mapping for a Solidity file."""
-
+        # 文件索引
         self.solidity_file_idx = solidity_file_idx
+        # 偏移量
         self.offset = offset
+        # 长度
         self.length = length
+        # 行号
         self.lineno = lineno
+        # 映射
         self.solc_mapping = mapping
 
 
 class SolidityFile:
-    """Representation of a file containing Solidity code."""
+    """
+    表示一个包含 Solidity 代码的文件
+
+    Representation of a file containing Solidity code.
+    """
 
     def __init__(self, filename: str, data: str, full_contract_src_maps: Set[str]):
         """
@@ -93,38 +141,53 @@ class SolidityFile:
         :param data: The code of the solidity file
         :param full_contract_src_maps: The set of contract source mappings of all the contracts in the file
         """
+        # 文件名
         self.filename = filename
+        # 文件内容
         self.data = data
+        # 文件中所有合约的源码映射集合
         self.full_contract_src_maps = full_contract_src_maps
 
 
 class SourceCodeInfo:
+    """
+    表示一个文件中特定代码的引用信息
+    """
     def __init__(self, filename, lineno, code, mapping):
         """Metadata class containing a code reference for a specific file."""
-
+        # 文件名
         self.filename = filename
+        # 行号
         self.lineno = lineno
+        # 代码片段
         self.code = code
+        # 映射
         self.solc_mapping = mapping
 
 
 def get_contracts_from_file(input_file, solc_settings_json=None, solc_binary="solc"):
     """
+    从 Solidity 文件中提取合约,生成合约对象
 
     :param input_file:
     :param solc_settings_json:
     :param solc_binary:
     """
+    # 获得输出json
     data = get_solc_json(
         input_file, solc_settings_json=solc_settings_json, solc_binary=solc_binary
     )
 
+    # 提取合约名称
     try:
+        # 访问"contracts"键,然后通过 input_file 路径找到对应的合约字典，并获取其键
         contract_names = data["contracts"][input_file].keys()
     except KeyError:
         raise NoContractFoundError
 
+    # 生成合约对象
     for contract_name in contract_names:
+        # 检查每个合约是否有部署字节码
         if len(
             data["contracts"][input_file][contract_name]["evm"]["deployedBytecode"][
                 "object"
@@ -140,19 +203,21 @@ def get_contracts_from_file(input_file, solc_settings_json=None, solc_binary="so
 
 def get_contracts_from_foundry(input_file, foundry_json):
     """
-    从 Foundry 的编译输出中提取智能合约对象
+    从 Foundry 的编译输出中提取并生成合约对象
 
     :param input_file:
     :param solc_settings_json:
     :param solc_binary:
     """
 
+    # 提取合约名称
     try:
         contract_names = foundry_json["contracts"][input_file].keys()
     except KeyError:
         raise NoContractFoundError
-
+    # 生成合约对象
     for contract_name in contract_names:
+        # 检查每个合约是否有部署字节码
         if len(
             foundry_json["contracts"][input_file][contract_name]["evm"][
                 "deployedBytecode"
@@ -168,7 +233,11 @@ def get_contracts_from_foundry(input_file, foundry_json):
 
 
 class SolidityContract(EVMContract):
-    """Representation of a Solidity contract."""
+    """
+    表示一个 Solidity 合约,继承自 EVMContract
+
+    Representation of a Solidity contract.
+    """
 
     def __init__(
         self,
@@ -178,6 +247,10 @@ class SolidityContract(EVMContract):
         solc_binary="solc",
         solc_data=None,
     ):
+        """
+        123
+        """
+        # 获得输出json
         if solc_data is None:
             data = get_solc_json(
                 input_file,
@@ -186,10 +259,11 @@ class SolidityContract(EVMContract):
             )
         else:
             data = solc_data
-
+        # 
         self.solc_indices = self.get_solc_indices(input_file, data)
         self.solc_json = data
         self.input_file = input_file
+        # 提取ast特征,包含变量,操作,地址,修饰符
         if "ast" in data["sources"][str(input_file)]:
             # Not available in old solidity versions, around ~0.4.11
             self.features = SolidityFeatureExtractor(
@@ -200,13 +274,18 @@ class SolidityContract(EVMContract):
         has_contract = False
 
         # If a contract name has been specified, find the bytecode of that specific contract
+        # 创建时字节码源码映射
         srcmap_constructor = []
+        # 部署字节码的源码映射
         srcmap = []
         if name:
             contract = data["contracts"][input_file][name]
             if len(contract["evm"]["deployedBytecode"]["object"]):
+                # 部署字节码
                 code = contract["evm"]["deployedBytecode"]["object"]
+                # 创建时字节码
                 creation_code = contract["evm"]["bytecode"]["object"]
+                # 创建映射
                 srcmap = contract["evm"]["deployedBytecode"]["sourceMap"].split(";")
                 srcmap_constructor = contract["evm"]["bytecode"]["sourceMap"].split(";")
                 has_contract = True
@@ -229,7 +308,7 @@ class SolidityContract(EVMContract):
 
         if not has_contract:
             raise NoContractFoundError
-
+        # 初始化源码映射列表
         self.mappings = []
 
         self.constructor_mappings = []
@@ -237,6 +316,7 @@ class SolidityContract(EVMContract):
         self._get_solc_mappings(srcmap)
         self._get_solc_mappings(srcmap_constructor, constructor=True)
 
+        # 创建一个合约对象,包含合约的代码、创建代码、名称以及反汇编信息
         super().__init__(code, creation_code, name=name)
 
     @staticmethod

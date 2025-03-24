@@ -21,7 +21,10 @@ class EVMContract(persistent.Persistent):
     """
 
     def __init__(self, code="", creation_code="", name="Unknown"):
-        """Create a new contract.
+        """
+        创建一个合约对象,包含合约的代码、创建代码、名称以及反汇编信息
+
+        Create a new contract.
 
         Workaround: We currently do not support compile-time linking.
         Dynamic contract addresses of the format __[contract-name]_____________ are replaced with a generic address
