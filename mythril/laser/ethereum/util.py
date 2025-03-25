@@ -56,7 +56,8 @@ def get_instruction_index(
     instruction_list: List[Dict], address: int
 ) -> Union[int, None]:
     """
-
+    根据给定的字节码地址，在指令列表中找到对应的指令索引
+    
     :param instruction_list:
     :param address:
     :return:

@@ -91,6 +91,10 @@ def get_code_hash(code) -> str:
 
 
 def sha3(value):
+    """
+    返回keccak哈希
+    """
+
     if isinstance(value, str):
         if value.startswith("0x"):
             new_hash = keccak(bytes.fromhex(value))
@@ -103,6 +107,8 @@ def sha3(value):
 
 def zpad(x, l):
     """
+    左侧填充0,使其达到指定长度
+
     Left zero pad value `x` at least to length `l`.
     """
     return b"\x00" * max(0, l - len(x)) + x
@@ -110,6 +116,8 @@ def zpad(x, l):
 
 def rzpad(value, total_length):
     """
+    右侧填充0,使其达到指定长度
+
     Right zero pad value `x` at least to length `l`.
     """
     return value + b"\x00" * max(0, total_length - len(value))

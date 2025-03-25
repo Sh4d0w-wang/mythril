@@ -275,7 +275,7 @@ class MythrilDisassembler:
         self, solidity_files: List[str]
     ) -> Tuple[str, List[SolidityContract]]:
         """
-        从 Solidity 源代码文件加载合约
+        从 Solidity 源代码文件中加载合约,创建合约对象,其中包含源码文件索引、json数据、文件路径、ast特征、源码映射及其中的反汇编等信息
 
         :param solidity_files: List of solidity_files
         :return: tuple of address, contract class list
@@ -359,6 +359,7 @@ class MythrilDisassembler:
     def hash_for_function_signature(func: str) -> str:
         """
         返回函数选择器
+
         Return function nadmes corresponding signature hash
         :param func: function name
         :return: Its hash signature
@@ -369,6 +370,14 @@ class MythrilDisassembler:
         self, address: str, params: Optional[List[str]] = None
     ) -> str:
         """
+        从slot中获取状态变量的值,参数可以是:
+
+        [position, length]：表示从指定位置开始的连续存储槽。
+
+        ["mapping", position, key1, key2, ...]：表示映射类型的存储槽。
+        
+        [position, length, array]：表示数组类型的存储槽。
+
         Get variables from the storage
         :param address: The contract address
         :param params: The list of parameters param types: [position, length] or ["mapping", position, key1, key2, ...  ]
@@ -376,16 +385,29 @@ class MythrilDisassembler:
         :return: The corresponding storage slot and its value
         """
         params = params or []
+        # 存储槽的起始位置，默认为 0
+        # 查询的存储槽数量，默认为 1
+        # 用于存储映射类型的存储槽位置
         (position, length, mappings) = (0, 1, [])
+
+        # 1.获取存储开始的位置
         try:
+            # ["mapping", position, key1, key2, ...]：表示映射类型的存储槽。
+            # 处理该类型
             if params[0] == "mapping":
                 if len(params) < 3:
                     raise CriticalError("Invalid number of parameters.")
+                # 获取位置p
                 position = int(params[1])
                 position_formatted = zpad(int_to_big_endian(position), 32)
+                # 获取key
                 for i in range(2, len(params)):
                     key = bytes(params[i], "utf8")
                     key_formatted = rzpad(key, 32)
+                    # 计算位置
+                    # slot p处存储全0，代表映射的开始
+                    # slot( keccak256( key1 + p ) ) --> key1.value
+                    # slot( keccak256( key2 + p ) ) --> key2.value
                     mappings.append(
                         int.from_bytes(
                             sha3(key_formatted + position_formatted), byteorder="big"
@@ -399,13 +421,21 @@ class MythrilDisassembler:
             else:
                 if len(params) >= 4:
                     raise CriticalError("Invalid number of parameters.")
-
+                # 处理普通类型
+                # [position, length]：表示从指定位置开始的连续存储槽。
                 if len(params) >= 1:
                     position = int(params[0])
                 if len(params) >= 2:
                     length = int(params[1])
+                # 处理数组类型
+                # [position, length, array]：表示数组类型的存储槽。
                 if len(params) == 3 and params[2] == "array":
+                    # 转成大端数字，并扩展成32位
                     position_formatted = zpad(int_to_big_endian(position), 32)
+                    # 长度存在slot p
+                    # array[0]的位置 --> slot( keccak256( p ) )
+                    # array[1]的位置 --> slot( keccak256( p ) + 1 )
+                    # ...
                     position = int.from_bytes(sha3(position_formatted), byteorder="big")
 
         except ValueError:
@@ -415,7 +445,9 @@ class MythrilDisassembler:
 
         outtxt = []
 
+        # 2.查询并存储值，调用web3.eth.getStorageAt()
         try:
+            # 单个slot查询
             if length == 1:
                 outtxt.append(
                     "{}: {}".format(
@@ -423,6 +455,7 @@ class MythrilDisassembler:
                     )
                 )
             else:
+                # mapping查询
                 if len(mappings) > 0:
                     for i in range(0, len(mappings)):
                         position = mappings[i]
@@ -432,6 +465,7 @@ class MythrilDisassembler:
                                 self.eth.eth_getStorageAt(address, position),
                             )
                         )
+                # 数组和普通类型的查询
                 else:
                     for i in range(position, position + length):
                         outtxt.append(

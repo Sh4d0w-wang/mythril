@@ -684,6 +684,7 @@ def add_analysis_args(options):
 def create_analyzer_parser(analyzer_parser: ArgumentParser):
     """
     添加文件参数
+
     Modify parser to handle analyze command
     :param analyzer_parser:
     :return:
@@ -708,6 +709,7 @@ def create_foundry_parser(foundry_parser: ArgumentParser):
 def validate_args(args: Namespace):
     """
     验证参数
+
     Validate cli args
     :param args:
     :return:
@@ -759,6 +761,8 @@ def validate_args(args: Namespace):
 
 def set_config(args: Namespace):
     """
+    设置配置,Infura ID、rpc等等
+
     Set config based on args
     :param args:
     :return: modified config
@@ -786,6 +790,8 @@ def set_config(args: Namespace):
 
 def load_code(disassembler: MythrilDisassembler, args: Namespace):
     """
+    加载代码,并反汇编,并生成更多相关信息
+
     Loads code into disassembly and returns address
     :param disassembler:
     :param args:
@@ -793,17 +799,21 @@ def load_code(disassembler: MythrilDisassembler, args: Namespace):
     """
 
     address = None
+    # 参数为字节码，直接反汇编
     if getattr(args, "code", None):
         # Load from bytecode
         code = args.code[2:] if args.code.startswith("0x") else args.code
         address, _ = disassembler.load_from_bytecode(code, args.bin_runtime)
+    # 参数为字节码文件，读取出来，再反汇编
     elif getattr(args, "codefile", None):
         bytecode = "".join([l.strip() for l in args.codefile if len(l.strip()) > 0])
         bytecode = bytecode[2:] if bytecode.startswith("0x") else bytecode
         address, _ = disassembler.load_from_bytecode(bytecode, args.bin_runtime)
+    # 参数为地址，通过rpc读取字节码，再反汇编
     elif getattr(args, "address", None):
         # Get bytecode from a contract address
         address, _ = disassembler.load_from_address(args.address)
+    # 参数为solidity源代码文件，解析文件
     elif getattr(args, "solidity_files", None):
         # Compile Solidity source file(s)
         if args.command in ANALYZE_LIST and args.graph and len(args.solidity_files) > 1:
@@ -814,6 +824,7 @@ def load_code(disassembler: MythrilDisassembler, args: Namespace):
         address, _ = disassembler.load_from_solidity(
             args.solidity_files
         )  # list of files
+    # 从Foundry中加载
     elif args.command in FOUNDRY_LIST:
         address, _ = disassembler.load_from_foundry()
 
@@ -856,6 +867,7 @@ def execute_command(
 ):
     """
     根据参数命令执行
+    
     Execute command
     :param disassembler:
     :param address:
@@ -1085,7 +1097,7 @@ def parse_args_and_execute(parser: ArgumentParser, args: Namespace) -> None:
         solc_json = getattr(args, "solc_json", None)
         solv = getattr(args, "solv", None)
         solc_args = getattr(args, "solc_args", None)
-        # AAAA
+        # 初始化一个反汇编器
         disassembler = MythrilDisassembler(
             eth=config.eth,
             solc_version=solv,

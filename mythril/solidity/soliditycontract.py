@@ -1,5 +1,49 @@
-"""This module contains representation classes for Solidity files, contracts
-and source mappings."""
+"""
+This module contains representation classes for Solidity files, contracts and source mappings.
+结构体太多,仔细标注以下,均是基于json文件中的内容来解析的:
+
+SolcAST-抽象语法树
+	ast{"nodeType --> 节点类型", "absolutePath --> 绝对路径", "nodes|children --> 节点"}
+
+SolcSource-源码
+	source{"SolcAST(ast) --> 抽象语法树", "id --> 标识符", "name --> 源码名称", "contents --> 源码内容"}
+
+SourceMapping-源码映射,该源码对应的各种信息{
+    "solidity_file_idx --> 文件索引",
+    "offset --> 偏移",
+    "length --> 长度",
+    "lineno --> 行号",
+    "solc_mapping --> 映射,json数据中的sourceMap",
+}
+
+SolidityFile-源代码文件{
+    "filename --> 文件名或路径",
+    "data --> 文件内容,代码等",
+    "full_contract_src_maps --> 所有顶层合约源码json中的src",
+}
+
+SourceCodeInfo-源码信息{
+	"filename --> 文件名",
+	"lineno --> 行号",
+	"code --> 代码",
+	"solc_mapping --> SourceMapping{}的solc_mapping",
+}
+
+SolidityContract-合约对象{
+	"name --> 合约名称",
+	"creation_code --> 代码",
+	"code --> 代码",
+	"creation_disassembly --> 反汇编",
+	"disassembly --> 反汇编",
+	"solc_indices -->  存储源码文件的索引信息,键是文件索引,值是SolidityFile{}",
+	"solc_json --> json数据",
+	"input_file --> 输入文件",
+	"features --> AST中的特征",
+	"mappings -->  列表,存储部署字节码的源码映射,一个个的SourceMapping{}",
+	"constructor_mappings --> 列表,存储构造函数字节码的源码映射,一个个的SourceMapping{}",
+}
+
+"""
 
 import logging
 from typing import Dict, Set
@@ -114,7 +158,11 @@ class SourceMapping:
     表示 Solidity 文件的源码映射信息
     """
     def __init__(self, solidity_file_idx, offset, length, lineno, mapping):
-        """Representation of a source mapping for a Solidity file."""
+        """
+        表示 Solidity 文件的源码映射信息,文件索引-偏移量-长度-行号-映射
+
+        Representation of a source mapping for a Solidity file.
+        """
         # 文件索引
         self.solidity_file_idx = solidity_file_idx
         # 偏移量
@@ -151,7 +199,7 @@ class SolidityFile:
 
 class SourceCodeInfo:
     """
-    表示一个文件中特定代码的引用信息
+    表示一个文件中源代码的信息,文件名-行号-代码片段-映射
     """
     def __init__(self, filename, lineno, code, mapping):
         """Metadata class containing a code reference for a specific file."""
@@ -248,7 +296,7 @@ class SolidityContract(EVMContract):
         solc_data=None,
     ):
         """
-        123
+        初始化一个合约信息,包含源码文件索引、json数据、文件路径、ast特征、源码映射及其中的反汇编
         """
         # 获得输出json
         if solc_data is None:
@@ -259,9 +307,11 @@ class SolidityContract(EVMContract):
             )
         else:
             data = solc_data
-        # 
+        # 存储源码文件的索引信息，键是文件索引，值是 SolidityFile 对象
         self.solc_indices = self.get_solc_indices(input_file, data)
+        # 存储编译器的输出 JSON 数据
         self.solc_json = data
+        # 存储 Solidity 文件的路径
         self.input_file = input_file
         # 提取ast特征,包含变量,操作,地址,修饰符
         if "ast" in data["sources"][str(input_file)]:
@@ -274,11 +324,12 @@ class SolidityContract(EVMContract):
         has_contract = False
 
         # If a contract name has been specified, find the bytecode of that specific contract
-        # 创建时字节码源码映射
+        # 存储构造函数字节码的源码映射
         srcmap_constructor = []
-        # 部署字节码的源码映射
+        # 存储部署字节码的源码映射
         srcmap = []
         if name:
+            # contracts -> input_file -> contract_name
             contract = data["contracts"][input_file][name]
             if len(contract["evm"]["deployedBytecode"]["object"]):
                 # 部署字节码
@@ -286,6 +337,9 @@ class SolidityContract(EVMContract):
                 # 创建时字节码
                 creation_code = contract["evm"]["bytecode"]["object"]
                 # 创建映射
+                # 一个字符串列表，表示合约部署字节码的源码映射信息
+                # 源码文件中的起始偏移量:源码片段的长度:源码文件的索引
+                # 0:15:0;15:25:0;...
                 srcmap = contract["evm"]["deployedBytecode"]["sourceMap"].split(";")
                 srcmap_constructor = contract["evm"]["bytecode"]["sourceMap"].split(";")
                 has_contract = True
@@ -322,12 +376,15 @@ class SolidityContract(EVMContract):
     @staticmethod
     def get_sources(indices_data: Dict, source_data: Dict) -> None:
         """
+        从编译输出中提取生成的源码文件信息
+
         Get source indices mapping. Function not needed for older solc versions.
         """
 
         if "generatedSources" not in source_data:
             return
         sources = source_data["generatedSources"]
+        # 遍历每个源
         for source in sources:
             full_contract_src_maps = SolidityContract.get_full_contract_src_maps(
                 SolcAST(source["ast"])
@@ -339,25 +396,33 @@ class SolidityContract(EVMContract):
     @staticmethod
     def get_solc_indices(input_file: str, data: Dict) -> Dict:
         """
+        从 Solidity 编译器的输出中提取源码文件的索引信息
+
         Returns solc file indices
         """
         indices: Dict = {}
+        # 遍历contracts中所有数据
         for contract_data in data["contracts"].values():
+            # 提取字节码和部署字节码
+            # 将字节码相关的源码文件信息添加到indices中
             for source_data in contract_data.values():
                 SolidityContract.get_sources(indices, source_data["evm"]["bytecode"])
                 SolidityContract.get_sources(
                     indices, source_data["evm"]["deployedBytecode"]
                 )
+        # 遍历每个源码文件
         for source in data["sources"].values():
             source = SolcSource(source)
+            # 获取该文件中所有合约的源码映射信息
             full_contract_src_maps = SolidityContract.get_full_contract_src_maps(
                 source.ast
             )
+            # 路径
             if source.ast.abs_path is not None:
                 abs_path = source.ast.abs_path
             else:
                 abs_path = input_file
-
+            # 打开源码文件，读取其内容，并将其封装为 SolidityFile 对象，存储到 indices 中
             with open(abs_path, "rb") as f:
                 code = f.read()
                 indices[source.id] = SolidityFile(
@@ -370,6 +435,8 @@ class SolidityContract(EVMContract):
     @staticmethod
     def get_full_contract_src_maps(ast: SolcAST) -> Set[str]:
         """
+        从 Solidity 编译器的抽象语法树AST中提取所有顶层合约的源码映射src信息
+
         Takes a solc AST and gets the src mappings for all the contracts defined in the top level of the ast
         :param ast: AST of the contract
         :return: The source maps
@@ -387,40 +454,49 @@ class SolidityContract(EVMContract):
 
     def get_source_info(self, address, constructor=False):
         """
+        根据给定的字节码地址获取对应的 Solidity 源码信息
 
         :param address:
         :param constructor:
         :return:
         """
-
+        # 反汇编
         disassembly = self.creation_disassembly if constructor else self.disassembly
+        # 映射
         mappings = self.constructor_mappings if constructor else self.mappings
+        # 指令索引
         index = helper.get_instruction_index(disassembly.instruction_list, address)
 
         if index is None or index >= len(mappings):
             # TODO: Find why this scenario happens. Possibly an external call
             return None
 
+        # 获取文件索引
         file_index = mappings[index].solidity_file_idx
 
         if file_index == -1:
             # If issue is detected in an internal file
             return None
 
+        # 获取源码文件信息
         solidity_file = self.solc_indices[file_index]
         filename = solidity_file.filename
-
+        # 偏移
         offset = mappings[index].offset
+        # 长度
         length = mappings[index].length
-
+        # 代码
         code = solidity_file.data.encode("utf-8")[offset : offset + length].decode(
             "utf-8", errors="ignore"
         )
+        # 行号
         lineno = mappings[index].lineno
         return SourceCodeInfo(filename, lineno, code, mappings[index].solc_mapping)
 
     def _is_autogenerated_code(self, offset: int, length: int, file_index: int) -> bool:
         """
+        检查给定的代码片段是否是自动生成的
+
         Checks whether the code is autogenerated or not
         :param offset: offset of the code
         :param length: length of the code
@@ -433,7 +509,7 @@ class SolidityContract(EVMContract):
         # Handle the common code src map for the entire code.
         if (
             "{}:{}:{}".format(offset, length, file_index)
-            in self.solc_indices[file_index].full_contract_src_maps
+            in self.solc_indices[file_index].full_contract_src_maps # 检查源码映射是否在全合约映射中
         ):
             return True
 
@@ -441,17 +517,20 @@ class SolidityContract(EVMContract):
 
     def _get_solc_mappings(self, srcmap, constructor=False):
         """
+        解析 Solidity 编译器输出的源码映射,并将其转换为更易于处理的 SourceMapping 对象
 
         :param srcmap:
         :param constructor:
         """
+        # constructor为True则使用self.constructor_mappings
+        # 否则self.mappings
         mappings = self.constructor_mappings if constructor else self.mappings
         prev_item = ""
         for item in srcmap:
             if item == "":
                 item = prev_item
             mapping = item.split(":")
-
+            # 偏移:长度:文件索引
             if len(mapping) > 0 and len(mapping[0]) > 0:
                 offset = int(mapping[0])
 
@@ -460,15 +539,17 @@ class SolidityContract(EVMContract):
 
             if len(mapping) > 2 and len(mapping[2]) > 0:
                 idx = int(mapping[2])
-
+            # 检查是否是自动生成的代码
             if self._is_autogenerated_code(offset, length, idx):
                 lineno = None
             else:
+                # 计算代码行号
                 lineno = (
                     self.solc_indices[idx]
-                    .data.encode("utf-8")[0:offset]
-                    .count("\n".encode("utf-8"))
+                    .data.encode("utf-8")[0:offset] # 获取文件内容
+                    .count("\n".encode("utf-8")) # 计算行数
                     + 1
                 )
             prev_item = item
+            # 更新映射
             mappings.append(SourceMapping(idx, offset, length, lineno, item))

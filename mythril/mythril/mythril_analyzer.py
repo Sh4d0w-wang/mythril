@@ -29,16 +29,18 @@ LARGE_TIME = 300
 
 class MythrilAnalyzer:
     """
+    封装了智能合约分析的逻辑，包括加载合约、执行符号执行、检测漏洞等
+
     The Mythril Analyzer class
     Responsible for the analysis of the smart contracts
     """
 
     def __init__(
         self,
-        disassembler: MythrilDisassembler,
+        disassembler: MythrilDisassembler, # 反汇编器
         cmd_args: Namespace,
-        strategy: str = "dfs",
-        address: Optional[str] = None,
+        strategy: str = "dfs", # 策略，默认深度优先搜索
+        address: Optional[str] = None, # 合约地址
     ):
         """
 
@@ -47,34 +49,57 @@ class MythrilAnalyzer:
         :param strategy: Search strategy
         :param address: Address of the contract
         """
+        # 从rpc中获取eth实例
         self.eth = disassembler.eth
+        # 合约
         self.contracts: List[EVMContract] = disassembler.contracts or []
+        # 是否使用链上数据
         self.use_onchain_data = not cmd_args.no_onchain_data
+        # 策略
         self.strategy = strategy
+        # 合约地址
         self.address = address
+        # 执行最大深度
         self.max_depth = cmd_args.max_depth
+        # 执行超时时间
         self.execution_timeout = cmd_args.execution_timeout
+        # 循环边界
         self.loop_bound = cmd_args.loop_bound
+        # 创建超时时间
         self.create_timeout = cmd_args.create_timeout
+        # 是否禁用依赖剪枝
         self.disable_dependency_pruning = cmd_args.disable_dependency_pruning
+        # 自定义模块目录
         self.custom_modules_directory = (
             cmd_args.custom_modules_directory
             if cmd_args.custom_modules_directory
             else ""
         )
+        # 剪枝因子
         args.pruning_factor = cmd_args.pruning_factor
+        # 求解器超时时间
         args.solver_timeout = cmd_args.solver_timeout
+        # 是否启用并行求解
         args.parallel_solving = cmd_args.parallel_solving
+        # 是否启用无约束存储
         args.unconstrained_storage = cmd_args.unconstrained_storage
+        # 调用深度限制
         args.call_depth_limit = cmd_args.call_depth_limit
+        # 是否禁用指令分析
         args.disable_iprof = cmd_args.disable_iprof
+        # 求解器日志
         args.solver_log = cmd_args.solver_log
+        # 交易序列
         args.transaction_sequences = cmd_args.transaction_sequences
+        # 是否禁用覆盖策略
         args.disable_coverage_strategy = cmd_args.disable_coverage_strategy
+        # 是否禁用变异剪枝
         args.disable_mutation_pruner = cmd_args.disable_mutation_pruner
+        # 是否启用摘要
         args.enable_summaries = cmd_args.enable_summaries
+        # 是否启用状态合并
         args.enable_state_merge = cmd_args.enable_state_merging
-
+        # 如果剪枝因子未设置，则根据执行超时时间自动设置
         if args.pruning_factor is None:
             if self.execution_timeout > LARGE_TIME:
                 args.pruning_factor = 1
