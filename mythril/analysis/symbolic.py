@@ -42,7 +42,10 @@ from .ops import Call, VarType, get_variable
 
 
 class SymExecWrapper:
-    """Wrapper class for the LASER Symbolic virtual machine.
+    """
+    符号执行虚拟机的封装
+
+    Wrapper class for the LASER Symbolic virtual machine.
 
     Symbolically executes the code and does a bit of pre-analysis for
     convenience.
@@ -50,20 +53,20 @@ class SymExecWrapper:
 
     def __init__(
         self,
-        contract,
-        address: Union[int, str, BitVec],
-        strategy: str,
-        dynloader=None,
-        max_depth: int = 22,
-        execution_timeout: Optional[int] = None,
-        loop_bound: int = 3,
-        create_timeout: Optional[int] = None,
-        transaction_count: int = 2,
-        modules: Optional[List[str]] = None,
-        compulsory_statespace: bool = True,
-        disable_dependency_pruning: bool = False,
-        run_analysis_modules: bool = True,
-        custom_modules_directory: str = "",
+        contract, # 需要符号执行的合约对象
+        address: Union[int, str, BitVec], # 合约地址，可以是整数、字符串或 BitVec
+        strategy: str, # 执行策略
+        dynloader=None, # 动态加载器，用于加载链上数据
+        max_depth: int = 22, # 符号执行的最大深度
+        execution_timeout: Optional[int] = None, # 执行超时时间
+        loop_bound: int = 3, # 循环边界
+        create_timeout: Optional[int] = None, # 创建超时时间
+        transaction_count: int = 2, # 符号执行的交易数量
+        modules: Optional[List[str]] = None, # 需要运行的分析模块列表
+        compulsory_statespace: bool = True, # 是否强制保存状态空间
+        disable_dependency_pruning: bool = False, # 是否禁用依赖剪枝
+        run_analysis_modules: bool = True, # 是否运行分析模块
+        custom_modules_directory: str = "", # 自定义模块目录
     ):
         """
 
@@ -83,11 +86,13 @@ class SymExecWrapper:
         :param enable_coverage_strategy: Boolean indicating whether the coverage strategy should be enabled
         :param custom_modules_directory: The directory to read custom analysis modules from
         """
+        # 将地址转换为BitVec
         if isinstance(address, str):
             address = symbol_factory.BitVecVal(int(address, 16), 256)
         if isinstance(address, int):
             address = symbol_factory.BitVecVal(address, 256)
         beam_width = None
+        # 选择执行策略
         if strategy == "dfs":
             s_strategy: Type[BasicSearchStrategy] = DepthFirstSearchStrategy
         elif strategy == "bfs":
@@ -104,11 +109,14 @@ class SymExecWrapper:
         else:
             raise ValueError("Invalid strategy argument supplied")
 
+        # 选择事务策略
         if args.incremental_txs is False:
             tx_strategy = RfTxPrioritiser(contract)
         else:
             tx_strategy = None
 
+        # 初始化创建者和攻击者地址
+        # AAAA
         creator_account = Account(
             hex(ACTORS.creator.value), "", dynamic_loader=None, contract_name=None
         )

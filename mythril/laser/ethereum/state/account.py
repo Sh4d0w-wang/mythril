@@ -16,42 +16,62 @@ log = logging.getLogger(__name__)
 
 
 class Storage:
-    """Storage class represents the storage of an Account."""
+    """
+    以太坊账户的存储类
+
+    Storage class represents the storage of an Account.
+    """
 
     def __init__(self, concrete=False, address=None, dynamic_loader=None) -> None:
-        """Constructor for Storage.
+        """
+        
+
+        Constructor for Storage.
 
         :param concrete: bool indicating whether to interpret uninitialized storage as concrete versus symbolic
         """
+        # concrete：表示是否将未初始化的存储解释为具体值
+        # 将未初始化的存储解释为具体值 且 不将storage视为符号
         if concrete and args.unconstrained_storage is False:
+            # 初始化一个具体的存储数组，默认值为0
             self._standard_storage: BaseArray = K(256, 256, 0)
         else:
+            # 初始化一个符号存储数组，名称为 Storage{address}
             self._standard_storage = Array(f"Storage{address}", 256, 256)
 
+        # 存储可打印的存储值
         self.printable_storage: Dict[BitVec, BitVec] = {}
-
+        # 动态加载器，用于从链上加载存储值
         self.dynld = dynamic_loader
+        # 存储已经从链上加载的存储键
         self.storage_keys_loaded: Set[int] = set()
+        # 账户地址
         self.address = address
 
         # Stores all keys set in the storage
+        # 存储所有在存储中设置的键
         self.keys_set: Set[BitVec] = set()
 
         # Stores all get keys in the storage
+        # 存储所有从存储中获取的键
         self.keys_get: Set[BitVec] = set()
 
     def __getitem__(self, item: BitVec) -> BitVec:
+        """
+        获取存储中的值
+        """
         storage = self._standard_storage
         self.keys_get.add(item)
         if (
             self.address
             and self.address.value != 0
-            and item.symbolic is False
-            and int(item.value) not in self.storage_keys_loaded
-            and (self.dynld and self.dynld.active)
-            and args.unconstrained_storage is False
+            and item.symbolic is False # 键是具体的值，而不是符号值
+            and int(item.value) not in self.storage_keys_loaded # 键尚未从链上加载
+            and (self.dynld and self.dynld.active) # 动态加载器已启用
+            and args.unconstrained_storage is False # 未启用无约束存储
         ):
             try:
+                # AAAA
                 value = symbol_factory.BitVecVal(
                     int(
                         self.dynld.read_storage(
@@ -104,7 +124,11 @@ class Storage:
 
 
 class Account:
-    """Account class representing ethereum accounts."""
+    """
+    以太坊账户类
+
+    Account class representing ethereum accounts.
+    """
 
     def __init__(
         self,

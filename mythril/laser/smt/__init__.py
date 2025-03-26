@@ -34,11 +34,19 @@ U = TypeVar("U", bound=Union[BitVec, z3.BitVecRef])
 
 
 class SymbolFactory(Generic[T, U]):
-    """A symbol factory provides a default interface for all the components of mythril to create symbols"""
+    """
+    一个符号工厂，提供了一个默认接口，用于 Mythril 的各个组件创建符号
+
+    T --> 布尔值的类型。U --> 位向量的类型。
+
+    A symbol factory provides a default interface for all the components of mythril to create symbols
+    """
 
     @staticmethod
     def Bool(value: "__builtins__.bool", annotations: Annotations = None) -> T:
         """
+        创建一个具有具体值的布尔对象
+
         Creates a Bool with concrete value
         :param value: The boolean value
         :param annotations: The annotations to initialize the bool with
@@ -49,6 +57,8 @@ class SymbolFactory(Generic[T, U]):
     @staticmethod
     def BoolSym(name: str, annotations: Annotations = None) -> T:
         """
+        创建一个布尔符号
+
         Creates a boolean symbol
         :param name: The name of the Bool variable
         :param annotations: The annotations to initialize the bool with
@@ -58,7 +68,10 @@ class SymbolFactory(Generic[T, U]):
 
     @staticmethod
     def BitVecVal(value: int, size: int, annotations: Annotations = None) -> U:
-        """Creates a new bit vector with a concrete value.
+        """
+        创建一个具有具体值的位向量
+
+        Creates a new bit vector with a concrete value.
 
         :param value: The concrete value to set the bit vector to
         :param size: The size of the bit vector
@@ -69,7 +82,10 @@ class SymbolFactory(Generic[T, U]):
 
     @staticmethod
     def BitVecSym(name: str, size: int, annotations: Annotations = None) -> U:
-        """Creates a new bit vector with a symbolic value.
+        """
+        创建一个符号位向量
+
+        Creates a new bit vector with a symbolic value.
 
         :param name: The name of the symbolic bit vector
         :param size: The size of the bit vector

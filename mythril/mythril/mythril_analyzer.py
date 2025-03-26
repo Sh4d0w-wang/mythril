@@ -108,6 +108,8 @@ class MythrilAnalyzer:
 
     def dump_statespace(self, contract: EVMContract = None) -> str:
         """
+        生成并返回指定合约的状态空间的可序列化表示
+
         Returns serializable statespace of the contract
         :param contract: The Contract on which the analysis should be done
         :return: The serialized state space
