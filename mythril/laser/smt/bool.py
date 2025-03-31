@@ -11,11 +11,18 @@ from mythril.laser.smt.expression import Expression
 
 
 class Bool(Expression[z3.BoolRef]):
-    """This is a Bool expression."""
+    """
+    一个 Bool 类，是对 Z3 的布尔表达式的封装
+
+    This is a Bool expression.
+    """
 
     @property
     def is_false(self) -> bool:
-        """Specifies whether this variable can be simplified to false.
+        """
+        检查布尔表达式是否可以简化为 False
+
+        Specifies whether this variable can be simplified to false.
 
         :return:
         """
@@ -24,7 +31,10 @@ class Bool(Expression[z3.BoolRef]):
 
     @property
     def is_true(self) -> bool:
-        """Specifies whether this variable can be simplified to true.
+        """
+        检查布尔表达式是否可以简化为 True
+
+        Specifies whether this variable can be simplified to true.
 
         :return:
         """
@@ -33,7 +43,10 @@ class Bool(Expression[z3.BoolRef]):
 
     @property
     def value(self) -> Union[bool, None]:
-        """Returns the concrete value of this bool if concrete, otherwise None.
+        """
+        返回布尔表达式的具体值
+
+        Returns the concrete value of this bool if concrete, otherwise None.
 
         :return: Concrete value or None
         """
@@ -48,7 +61,8 @@ class Bool(Expression[z3.BoolRef]):
     # MYPY: complains about overloading __eq__ # noqa
     def __eq__(self, other: object) -> "Bool":  # type: ignore
         """
-
+        重载 == 操作符，用于比较两个布尔表达式
+        
         :param other:
         :return:
         """
@@ -60,6 +74,7 @@ class Bool(Expression[z3.BoolRef]):
     # MYPY: complains about overloading __ne__ # noqa
     def __ne__(self, other: object) -> "Bool":  # type: ignore
         """
+        重载 != 操作符，用于比较两个布尔表达式
 
         :param other:
         :return:
@@ -71,6 +86,7 @@ class Bool(Expression[z3.BoolRef]):
 
     def __bool__(self) -> bool:
         """
+        重载布尔上下文中的行为，返回布尔表达式的值
 
         :return:
         """
@@ -81,6 +97,7 @@ class Bool(Expression[z3.BoolRef]):
 
     def substitute(self, original_expression, new_expression):
         """
+        替换布尔表达式中的子表达式
 
         :param original_expression:
         :param new_expression:
@@ -92,27 +109,47 @@ class Bool(Expression[z3.BoolRef]):
         self.raw = z3.substitute(self.raw, (original_z3, new_z3))
 
     def __hash__(self) -> int:
+        """
+        返回布尔表达式的哈希值
+        """
         return self.raw.__hash__()
 
 
 def And(*args: Union[Bool, bool]) -> Bool:
-    """Create an And expression."""
+    """
+    创建一个逻辑与(AND)表达式
+
+    And(a, b, c) --> a AND b AND c
+
+    Create an And expression.
+    """
     annotations: Set = set()
+    # 将所有参数转换为 Bool 对象
     args_list = [arg if isinstance(arg, Bool) else Bool(arg) for arg in args]
+    # 合并所有参数的注解
     for arg in args_list:
         annotations = annotations.union(arg.annotations)
+    # 创建逻辑与表达式
     return Bool(z3.And([a.raw for a in args_list]), annotations)
 
 
 def Xor(a: Bool, b: Bool) -> Bool:
-    """Create an And expression."""
+    """
+    创建一个逻辑异或(XOR)表达式
 
+    Create an And expression.
+    """
+    # 合并两个参数的注解
     union = a.annotations.union(b.annotations)
+    # 创建一个逻辑异或表达式
     return Bool(z3.Xor(a.raw, b.raw), union)
 
 
 def Or(*args: Union[Bool, bool]) -> Bool:
-    """Create an or expression.
+    """
+    创建一个逻辑或(OR)表达式
+
+    Create an or expression.
 
     :param a:
     :param b:
@@ -126,7 +163,10 @@ def Or(*args: Union[Bool, bool]) -> Bool:
 
 
 def Not(a: Bool) -> Bool:
-    """Create a Not expression.
+    """
+    创建一个逻辑非(NOT)表达式
+
+    Create a Not expression.
 
     :param a:
     :return:
@@ -135,7 +175,10 @@ def Not(a: Bool) -> Bool:
 
 
 def is_false(a: Bool) -> bool:
-    """Returns whether the provided bool can be simplified to false.
+    """
+    检查布尔表达式是否可以简化为 False
+    
+    Returns whether the provided bool can be simplified to false.
 
     :param a:
     :return:
@@ -144,7 +187,10 @@ def is_false(a: Bool) -> bool:
 
 
 def is_true(a: Bool) -> bool:
-    """Returns whether the provided bool can be simplified to true.
+    """
+    检查布尔表达式是否可以简化为 True
+    
+    Returns whether the provided bool can be simplified to true.
 
     :param a:
     :return:

@@ -97,6 +97,8 @@ class SymbolFactory(Generic[T, U]):
 
 class _SmtSymbolFactory(SymbolFactory[SMTBool, BitVec]):
     """
+    具体的 SymbolFactory 实现
+
     An implementation of a SymbolFactory that creates symbols using
     the classes in: mythril.laser.smt
     """
@@ -104,6 +106,8 @@ class _SmtSymbolFactory(SymbolFactory[SMTBool, BitVec]):
     @staticmethod
     def Bool(value: "__builtins__.bool", annotations: Annotations = None) -> SMTBool:
         """
+        创建一个具有具体值的布尔对象
+
         Creates a Bool with concrete value
         :param value: The boolean value
         :param annotations: The annotations to initialize the bool with
@@ -115,6 +119,8 @@ class _SmtSymbolFactory(SymbolFactory[SMTBool, BitVec]):
     @staticmethod
     def BoolSym(name: str, annotations: Annotations = None) -> SMTBool:
         """
+        创建一个布尔符号
+
         Creates a boolean symbol
         :param name: The name of the Bool variable
         :param annotations: The annotations to initialize the bool with
@@ -125,40 +131,62 @@ class _SmtSymbolFactory(SymbolFactory[SMTBool, BitVec]):
 
     @staticmethod
     def BitVecVal(value: int, size: int, annotations: Annotations = None) -> BitVec:
-        """Creates a new bit vector with a concrete value."""
+        """
+        创建一个具有具体值的位向量
+
+        Creates a new bit vector with a concrete value.
+        """
         raw = z3.BitVecVal(value, size)
         return BitVec(raw, annotations)
 
     @staticmethod
     def BitVecSym(name: str, size: int, annotations: Annotations = None) -> BitVec:
-        """Creates a new bit vector with a symbolic value."""
+        """
+        创建一个符号位向量
+
+        Creates a new bit vector with a symbolic value.
+        """
         raw = z3.BitVec(name, size)
         return BitVec(raw, annotations)
 
 
 class _Z3SymbolFactory(SymbolFactory[z3.BoolRef, z3.BitVecRef]):
     """
+    具体的 SymbolFactory 实现,返回Z3符号
+
     An implementation of a SymbolFactory that directly returns
     z3 symbols
     """
 
     @staticmethod
     def Bool(value: "__builtins__.bool", annotations: Annotations = None) -> z3.BoolRef:
-        """Creates a new bit vector with a concrete value"""
+        """
+        创建一个具有具体值的布尔对象
+
+        Creates a new bit vector with a concrete value
+        """
         return z3.BoolVal(value)
 
     @staticmethod
     def BitVecVal(
         value: int, size: int, annotations: Annotations = None
     ) -> z3.BitVecRef:
-        """Creates a new bit vector with a concrete value."""
+        """
+        创建一个具有具体值的位向量
+
+        Creates a new bit vector with a concrete value.
+        """
         return z3.BitVecVal(value, size)
 
     @staticmethod
     def BitVecSym(
         name: str, size: int, annotations: Annotations = None
     ) -> z3.BitVecRef:
-        """Creates a new bit vector with a symbolic value."""
+        """
+        创建一个符号位向量
+        
+        Creates a new bit vector with a symbolic value.
+        """
         return z3.BitVec(name, size)
 
 
