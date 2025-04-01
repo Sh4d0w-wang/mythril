@@ -8,7 +8,11 @@ from mythril.laser.smt import (
 
 
 class ReturnData:
-    """Base returndata class."""
+    """
+    表示智能合约调用的返回数据
+
+    Base returndata class.
+    """
 
     def __init__(self, return_data: List[BitVec], return_data_size: BitVec) -> None:
         """
